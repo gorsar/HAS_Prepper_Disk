@@ -76,7 +76,7 @@
       <div class="slogan">Çevrimdışı bilgi arşivi &mdash; internet olmasa da açık</div>
     </div>
     <div class="navlinks">
-      <a href="/kiwix/">Kütüphane</a><a href="/maps">Haritalar</a><a href="/admin">Yönetim</a>
+      <a href="/kiwix/">Kütüphane</a><a href="/maps" data-probe>Haritalar</a><a href="/admin" data-probe>Yönetim</a>
     </div>
   </div>
 
@@ -184,7 +184,22 @@ async function loadBooks(){
   }catch(e){ return null; }
 }
 
-function render(books){
+/* Sabit adresli servis bu cihazda var mı? (Windows sürümünde /maps, /kolibri, /admin yok)
+   Is a fixed-URL service available on this device? */
+async function probe(url){
+  try{ const r = await fetch(url, { method:"HEAD", redirect:"follow" }); return r.ok; }
+  catch(e){ return false; }
+}
+async function loadServices(){
+  const urls = new Set(CATS.flatMap(c => c.items).filter(i => i.url).map(i => i.url));
+  document.querySelectorAll("a[data-probe]").forEach(a => urls.add(a.getAttribute("href")));
+  const ok = new Set();
+  await Promise.all([...urls].map(async u => { if (await probe(u)) ok.add(u); }));
+  document.querySelectorAll("a[data-probe]").forEach(a => { if (!ok.has(a.getAttribute("href"))) a.remove(); });
+  return ok;
+}
+
+function render(books, services){
   let html = "", ready = 0, total = 0;
   const used = new Set();
   const sel = document.getElementById("book");
@@ -192,7 +207,8 @@ function render(books){
     html += `<tr><td class="cat" colspan="5">${esc(c.title)}</td></tr>`;
     for (const i of c.items) {
       total++;
-      let url = i.url || null, status = i.url ? "Kurulu" : "Henüz yüklenmedi";
+      const svc = i.url && services.has(i.url);
+      let url = svc ? i.url : null, status = svc ? "Kurulu" : "Henüz yüklenmedi";
       if (i.zim) {
         if (books === null) { url = "/kiwix/"; status = "Kütüphaneden açın"; }
         else {
@@ -251,7 +267,7 @@ document.getElementById("search").addEventListener("submit", e => {
     : `/kiwix/search?pattern=${encodeURIComponent(q)}`;
 });
 
-loadBooks().then(render);
+Promise.all([loadBooks(), loadServices()]).then(([books, services]) => render(books, services));
 </script>
 </body>
 </html>

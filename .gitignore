@@ -2,3 +2,7 @@
 __MACOSX/
 *.zip
 Claude outputs/
+
+# Windows
+windows/bin/
+library/

@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/demo.gif" width="400" alt="HAS_PrepperDisk exploded view"></p>
 
-**[English](#english) · [Türkçe](#türkçe)**
+**[English](#english) · [Türkçe](#türkçe)** · **Windows:** [EN](#running-on-windows) · [TR](#windowsta-çalıştırma)
 
 ---
 
@@ -71,6 +71,19 @@ The Pi's built-in Wi-Fi is dedicated to the hotspot. If the Pi needs internet te
 4. When you are done, remove the connection: `sudo nmcli connection delete temp-wifi`
 
 **Never run `sudo iiab-network` while a USB Wi-Fi adapter is plugged in.** It may move the hotspot onto the adapter. Unplug it first.
+
+### Running on Windows
+
+No Raspberry Pi needed. The same library and homepage run on a Windows 10/11 PC. Nothing is installed system-wide and no admin rights are needed. Everything stays inside the repo folder.
+
+1. Download this repo (green **Code** button → **Download ZIP**, or `git clone`) and extract it.
+2. *(Optional)* To store the ZIM files on another drive, open `config\windows.conf` and set `LIBRARY=D:\PrepperLibrary`. Choose what to download in `config\content.conf`.
+3. Double-click **`Icerik-Indir.bat`** to download the content. On the first run it also downloads [kiwix-serve](https://github.com/kiwix/kiwix-tools) and [Caddy](https://caddyserver.com) into `windows\bin`. Re-run it to resume or update. You can also copy `.zim` files you already have into `library\zims`.
+4. Double-click **`Baslat.bat`**. The homepage opens at **http://localhost:8080/home/**. Close the window to stop.
+
+**Other devices:** the window also prints addresses like `http://192.168.1.20:8080/home/`. Phones on the same network can use them. When Windows Firewall asks about `caddy.exe`, allow it on private networks. For a Pi-like hotspot, turn on Windows **Mobile hotspot**. Phones that join it use `http://192.168.137.1:8080/home/`.
+
+**Not available on Windows:** maps, Kolibri, the admin console and the captive portal. These come from Internet-in-a-Box. The homepage greys them out automatically.
 
 ### Repo layout
 
@@ -185,6 +198,19 @@ Pi'nin dahili Wi-Fi kartı sadece hotspot için kullanılıyor. Pi'nin geçici o
 4. İşin bitince bağlantıyı sil: `sudo nmcli connection delete gecici-wifi`
 
 **USB Wi-Fi adaptörü takılıyken asla `sudo iiab-network` çalıştırma.** Hotspot'u adaptöre taşıyabilir. Önce adaptörü çıkar.
+
+### Windows'ta çalıştırma
+
+Raspberry Pi gerekmez. Aynı kütüphane ve ana sayfa Windows 10/11 bir bilgisayarda da çalışır. Sisteme hiçbir şey kurulmaz, yönetici yetkisi gerekmez. Her şey repo klasörünün içinde kalır.
+
+1. Repoyu indir (yeşil **Code** düğmesi → **Download ZIP**, ya da `git clone`) ve zip'i aç.
+2. *(İsteğe bağlı)* ZIM dosyalarını başka bir diskte tutmak için `config\windows.conf` dosyasında `LIBRARY=D:\PrepperLibrary` satırını aç. Ne indirileceğini `config\content.conf` dosyasından seç.
+3. İçerikleri indirmek için **`Icerik-Indir.bat`** dosyasına çift tıkla. İlk çalıştırmada [kiwix-serve](https://github.com/kiwix/kiwix-tools) ve [Caddy](https://caddyserver.com) de `windows\bin` klasörüne indirilir. Yarıda kalırsa ya da içerikleri güncellemek istersen tekrar çalıştır. Elinde hazır `.zim` dosyaları varsa onları da `library\zims` klasörüne kopyalayabilirsin.
+4. **`Baslat.bat`** dosyasına çift tıkla. Ana sayfa **http://localhost:8080/home/** adresinde açılır. Kapatmak için pencereyi kapat.
+
+**Diğer cihazlardan erişim:** Pencerede `http://192.168.1.20:8080/home/` gibi adresler de yazar. Aynı ağdaki telefonlar bu adresleri kullanabilir. Windows Güvenlik Duvarı `caddy.exe` için izin sorarsa özel ağlarda izin ver. Pi'deki gibi kendi Wi-Fi ağını kurmak için Windows'un **Mobil etkin nokta** özelliğini aç. Ona bağlanan telefonlar `http://192.168.137.1:8080/home/` adresini kullanır.
+
+**Windows'ta olmayanlar:** Haritalar, Kolibri, yönetim paneli ve captive portal. Bunlar Internet-in-a-Box'tan geliyor. Ana sayfa bunları kendiliğinden gri gösterir.
 
 ### Repo yapısı
 

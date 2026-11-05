@@ -1,0 +1,19 @@
+# start.ps1 bu dosyayı ortam değişkenleriyle çalıştırır. / Run by start.ps1 with these env vars.
+{
+	admin off
+}
+
+:{$PREPPER_PORT} {
+	redir / /home/
+	redir /home /home/
+	handle_path /home/* {
+		root * {$PREPPER_WWW}
+		file_server
+	}
+	handle /kiwix* {
+		reverse_proxy 127.0.0.1:{$KIWIX_PORT}
+	}
+	handle {
+		respond "Bu bolum Windows surumunde yok / not available on Windows" 404
+	}
+}
