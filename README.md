@@ -1,261 +1,129 @@
-<p align="center"><img src="assets/demo.gif" width="400" alt="HAS_PrepperDisk exploded view"></p>
+# HAS_PrepperDisk — Windows
 
-**[English](#english) · [Türkçe](#türkçe)** · **Windows:** [EN](#running-on-windows) · [TR](#windowsta-çalıştırma)
-
----
-
-## English
-
-An offline knowledge archive on a Raspberry Pi 5. Wikipedia, maps, medical references and repair guides, served over the Pi's own Wi-Fi hotspot. Any phone or laptop that joins the network can open them in a browser. No internet needed.
-
-Built on [Internet-in-a-Box](https://github.com/iiab/iiab) and [Kiwix](https://kiwix.org). This repo adds a ready-made configuration, helper scripts and a custom homepage.
-
-### Hardware
-
-| Part | Notes |
-|---|---|
-| Raspberry Pi 5 (4 GB or 8 GB) | |
-| M.2 NVMe HAT + NVMe SSD (256 GB+) | Content lives here |
-| microSD card (32 GB+) | Operating system |
-| 5V/5A USB-C power supply | The official one is recommended |
-| Active cooler | The Pi 5 and SSD get warm |
-| Ethernet cable | Recommended during install |
-
-
-<img width="572" height="774" alt="Screenshot 2026-10-30 at 23 22 21" src="https://github.com/user-attachments/assets/0f8cf21f-2407-4346-a9ec-e466cc926ade" />
-
-
-### Installation
-
-**1. Operating system.** Use Raspberry Pi Imager to flash **Raspberry Pi OS Lite (64-bit)** to the SD card. In Imager's settings, enable SSH and set a username and password. Boot the Pi with the SSD attached and connect it to your router with Ethernet.
-
-**2. Update and get this repo.**
-```bash
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y git
-git clone https://github.com/schematrix/HAS_Prepper_Disk.git
-cd HAS_Prepper_Disk
-chmod +x install.sh scripts/*.sh
-```
-
-**3. Mount the SSD at `/library`.** Find the disk name with `lsblk`; it is usually `nvme0n1`. If the disk is not ext4 it will be formatted, and the script asks before doing so.
-```bash
-sudo ./scripts/setup-ssd.sh /dev/nvme0n1
-```
-
-**4. Install.** The script asks for the Wi-Fi name and password, then installs Internet-in-a-Box (30–60 min). **If the Pi reboots or the install stops, run the same command again.** It continues where it left off.
-```bash
-sudo ./install.sh
-```
-
-**5. Download content.** Edit `config/content.conf` to choose what to download, then run the script below. The defaults need about 150 GB, and downloads can take many hours. If a download is interrupted, re-run the script and it resumes.
-```bash
-sudo ./scripts/download-content.sh
-```
-
-**6. Maps.** Open `http://<pi-ip>/admin` (user `iiab-admin`), go to the maps section of the **Install Content** menu and choose the regions you want.
-
-**7. Use it.** Join the Wi-Fi network you created and open **http://box.lan/home**.
-
-### Optional: internet over a USB Wi-Fi adapter
-
-The Pi's built-in Wi-Fi is dedicated to the hotspot. If the Pi needs internet temporarily (updates, new content) and there is no Ethernet cable, add a cheap USB Wi-Fi adapter as a second card. Adapters with the MediaTek MT7601U chip work out of the box.
-
-1. Plug the adapter in, preferably into a black USB 2.0 port. The blue USB 3.0 ports can interfere with 2.4 GHz Wi-Fi.
-2. Join the Pi's hotspot from your laptop and connect: `ssh user@10.10.10.10`
-3. Connect the adapter (usually `wlan1`) to a Wi-Fi network:
-   ```bash
-   nmcli device wifi list ifname wlan1
-   sudo nmcli device wifi connect "NETWORK_NAME" password "PASSWORD" ifname wlan1 name temp-wifi
-   ```
-4. When you are done, remove the connection: `sudo nmcli connection delete temp-wifi`
-
-**Never run `sudo iiab-network` while a USB Wi-Fi adapter is plugged in.** It may move the hotspot onto the adapter. Unplug it first.
-
-### Running on Windows
-
-No Raspberry Pi needed. The same library and homepage run on a Windows 10/11 PC. Nothing is installed system-wide and no admin rights are needed. Everything stays inside the repo folder.
-
-1. Download this repo (green **Code** button → **Download ZIP**, or `git clone`) and extract it.
-2. *(Optional)* To store the ZIM files on another drive, open `config\windows.conf` and set `LIBRARY=D:\PrepperLibrary`. Choose what to download in `config\content.conf`.
-3. Double-click **`Icerik-Indir.bat`** to download the content. On the first run it also downloads [kiwix-serve](https://github.com/kiwix/kiwix-tools) and [Caddy](https://caddyserver.com) into `windows\bin`. Re-run it to resume or update. You can also copy `.zim` files you already have into `library\zims`.
-4. Double-click **`Baslat.bat`**. The homepage opens at **http://localhost:8080/home/**. Close the window to stop.
-
-**Other devices:** the window also prints addresses like `http://192.168.1.20:8080/home/`. Phones on the same network can use them. When Windows Firewall asks about `caddy.exe`, allow it on private networks. For a Pi-like hotspot, turn on Windows **Mobile hotspot**. Phones that join it use `http://192.168.137.1:8080/home/`.
-
-**Not available on Windows:** maps, Kolibri, the admin console and the captive portal. These come from Internet-in-a-Box. The homepage greys them out automatically.
-
-### Repo layout
-
-```
-install.sh                 main installer
-scripts/setup-ssd.sh       mounts the SSD at /library
-scripts/download-content.sh  downloads/updates ZIM files from Kiwix
-scripts/install-homepage.sh  installs the custom homepage
-config/iiab-overrides.yml  Internet-in-a-Box settings
-config/content.conf        list of content to download
-www/home/index.html        homepage
-```
-
-### Troubleshooting
-
-- **`ssh user@hostname.local` stops working after install.** Internet-in-a-Box renames the Pi to `box`. Use `ssh user@box.local` or the Pi's IP address. To find the IP, run `arp -a` on your computer or check your router's device list.
-- **Chromium says the profile is locked.** This also comes from the hostname change. Click "Unlock Profile", or run `rm -f ~/.config/chromium/Singleton*`.
-- **The hotspot doesn't appear.** Connect over Ethernet, check `sudo iiab-diagnostics`, and make sure the install finished: `/etc/iiab/install-flags/iiab-complete` must exist.
-- **Map downloads fail with "connection reset by peer".** The map server (`contabostorage.com`) is blocked in some countries, e.g. Turkey. Install Cloudflare WARP on the Pi, connect, retry the download in the admin console, then disconnect:
-  ```bash
-  curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-  echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(. /etc/os-release; echo $VERSION_CODENAME) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-  sudo apt update && sudo apt install -y cloudflare-warp
-  warp-cli --accept-tos registration new && warp-cli --accept-tos connect
-  # after downloads finish:
-  warp-cli --accept-tos disconnect
-  ```
-- **Book collections (Water Treatment, Knots, Food for Preppers, Post-Disaster, Medicine) keep loading forever.** These collections store their book list in the browser's local database. iPhone Safari private tabs and the captive portal pop-up window block that. Open them in a normal Safari tab.
-- **The hotspot never comes up and the log says "invalid WPA passphrase length".** Wi-Fi passwords must be 8–63 characters. Fix `hostapd_password` in `/etc/iiab/local_vars.yml` and `wpa_passphrase` in `/etc/hostapd/hostapd.conf`, then `sudo systemctl restart hostapd`.
-- **The hotspot is visible, but devices say "incorrect password" or drop after a few seconds.** The password is probably fine; the hotspot bridge (`br0`) is down. In `sudo journalctl -u hostapd` you see "associated → disassociated" repeating every ~4 seconds. Check:
-  ```bash
-  ip -br addr show br0
-  bridge link
-  ```
-  If `br0` is DOWN and `wlan0` shows `state disabled`, the bridge was not created at boot. Changing connections with `nmcli` can leave the files in `/etc/netplan/90-NM-*.yaml` empty, which removes the bridge. Fix:
-  ```bash
-  sudo mkdir -p /root/netplan-bak && sudo mv /etc/netplan/90-NM-*.yaml /root/netplan-bak/
-  sudo nmcli connection add type bridge ifname br0 con-name iiab-br0 ipv4.method manual ipv4.addresses 10.10.10.10/24 ipv6.method disabled bridge.stp no connection.autoconnect yes
-  sudo nmcli connection up iiab-br0
-  sudo systemctl restart hostapd dnsmasq
-  ```
-  `br0` should now be UP with 10.10.10.10 and `wlan0` should show `state forwarding`.
-- **SSH without a cable:** join the Pi's hotspot and use `ssh user@10.10.10.10`.
-- **Restoring the original homepage:** `sudo cp /library/www/html/home/index.html.iiab-original /library/www/html/home/index.html`
-
-### License
-
-The scripts and homepage in this repo are released under the [MIT License](LICENSE). Internet-in-a-Box, Kiwix and all downloaded content (Wikipedia, OpenStreetMap, etc.) keep their own licenses. This project is not affiliated with Internet-in-a-Box or Kiwix.
+**[Türkçe](#türkçe) · [English](#english)**
 
 ---
 
 ## Türkçe
 
-Raspberry Pi 5 üzerinde çevrimdışı bilgi arşivi. Wikipedia, haritalar, tıbbi başvuru kaynakları ve tamir rehberleri Pi'nin kendi Wi-Fi ağı üzerinden sunulur. Ağa bağlanan herhangi bir telefon ya da bilgisayar bunları tarayıcıdan açabilir. İnternet gerekmez.
+Windows bilgisayarda çalışan çevrimdışı bilgi arşivi. Wikipedia, tıbbi başvuru kaynakları, tamir rehberleri ve hayatta kalma kitapları tek bir ana sayfadan açılır. İçerikler bir kez indirildikten sonra **internet gerekmez**. Aynı ağdaki telefonlar ve bilgisayarlar da tarayıcıdan erişebilir.
 
-[Internet-in-a-Box](https://github.com/iiab/iiab) ve [Kiwix](https://kiwix.org) üzerine kurulmuştur. Bu repo hazır ayarlar, yardımcı betikler ve özel bir ana sayfa ekler.
+Bu repo, Raspberry Pi için hazırlanmış [schematrix/HAS_Prepper_Disk](https://github.com/schematrix/HAS_Prepper_Disk) projesinin **Windows'a uyarlanmış forkudur**. İçerikler [Kiwix](https://kiwix.org)'ten gelir, Internet-in-a-Box ya da Raspberry Pi gerekmez.
 
-### Donanım
+### Gereksinimler
 
-| Parça | Not |
-|---|---|
-| Raspberry Pi 5 (4 GB veya 8 GB) | |
-| M.2 NVMe HAT + NVMe SSD (256 GB+) | İçerikler burada durur |
-| microSD kart (32 GB+) | İşletim sistemi |
-| 5V/5A USB-C adaptör | Resmi adaptör önerilir |
-| Aktif soğutucu | Pi 5 ve SSD ısınır |
-| Ethernet kablosu | Kurulum sırasında önerilir |
+- Windows 10 veya 11 (64-bit)
+- İçerikler için disk alanı: küçük bir seçki için 10–20 GB, varsayılan listenin tamamı için ~150 GB
+- Kurulum yok, yönetici yetkisi gerekmez. Her şey bu klasörün içinde kalır.
 
-### Kurulum
+### Hızlı başlangıç
 
-**1. İşletim sistemi.** Raspberry Pi Imager ile SD karta **Raspberry Pi OS Lite (64-bit)** yaz. Imager ayarlarında SSH'ı aç, kullanıcı adı ve şifre belirle. Pi'yi SSD takılıyken başlat ve modeme Ethernet ile bağla.
-
-**2. Sistemi güncelle ve repoyu indir.**
-```bash
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y git
-git clone https://github.com/schematrix/HAS_Prepper_Disk.git
-cd HAS_Prepper_Disk
-chmod +x install.sh scripts/*.sh
-```
-
-**3. SSD'yi `/library` klasörüne bağla.** Disk adını `lsblk` ile bul, genelde `nvme0n1` olur. Disk ext4 değilse formatlanır, ama betik bunu yapmadan önce onay ister.
-```bash
-sudo ./scripts/setup-ssd.sh /dev/nvme0n1
-```
-
-**4. Kur.** Betik önce Wi-Fi adını ve şifresini sorar, sonra Internet-in-a-Box'ı kurar (30–60 dk). **Pi yeniden başlarsa ya da kurulum yarıda kalırsa aynı komutu tekrar çalıştır.** Kaldığı yerden devam eder.
-```bash
-sudo ./install.sh
-```
-
-**5. İçerikleri indir.** Ne indirileceğini `config/content.conf` dosyasından seç, sonra aşağıdaki betiği çalıştır. Varsayılan liste yaklaşık 150 GB tutar ve indirme saatler sürebilir. İndirme yarıda kalırsa betiği tekrar çalıştırman yeterli, kaldığı yerden devam eder.
-```bash
-sudo ./scripts/download-content.sh
-```
-
-**6. Haritalar.** `http://<pi-ip>/admin` adresine gir (kullanıcı adı `iiab-admin`), **Install Content** menüsündeki harita bölümüne git ve istediğin bölgeleri seç.
-
-**7. Kullan.** Oluşturduğun Wi-Fi ağına bağlan ve **http://box.lan/home** adresini aç.
-
-### İsteğe bağlı: USB Wi-Fi adaptörüyle internet
-
-Pi'nin dahili Wi-Fi kartı sadece hotspot için kullanılıyor. Pi'nin geçici olarak internete çıkması gerekirse (güncelleme, yeni içerik) ve Ethernet kablosu yoksa ikinci kart olarak ucuz bir USB Wi-Fi adaptörü tak. MediaTek MT7601U yongalı adaptörler kurulumsuz çalışıyor.
-
-1. Adaptörü mümkünse siyah USB 2.0 portlarından birine tak. Mavi USB 3.0 portları 2,4 GHz Wi-Fi'da parazit yapabiliyor.
-2. Bilgisayarını Pi'nin hotspot'una bağla ve SSH ile gir: `ssh kullanici@10.10.10.10`
-3. Adaptörü (genelde `wlan1`) bir Wi-Fi ağına bağla:
-   ```bash
-   nmcli device wifi list ifname wlan1
-   sudo nmcli device wifi connect "AG_ADI" password "SIFRE" ifname wlan1 name gecici-wifi
+1. **İndir.** Yeşil **Code** düğmesi → **Download ZIP**, ardından zip'i bir klasöre aç. Ya da:
    ```
-4. İşin bitince bağlantıyı sil: `sudo nmcli connection delete gecici-wifi`
+   git clone https://github.com/gorsar/HAS_Prepper_Disk.git
+   ```
+2. **İçerikleri seç.** `config\content.conf` dosyasını Not Defteri ile aç. İstemediğin satırların başına `#` koy (aşağıdaki tabloya bak).
+3. **İçerikleri indir.** **`Icerik-Indir.bat`** dosyasına çift tıkla. İlk çalıştırmada gerekli iki küçük program da (kiwix-serve ve Caddy, toplam ~35 MB) `windows\bin` klasörüne iner. İndirme yarıda kalırsa tekrar çalıştır, kaldığı yerden devam eder.
+4. **Başlat.** **`Baslat.bat`** dosyasına çift tıkla. Tarayıcıda **http://localhost:8080/home/** açılır. Kapatmak için siyah pencereyi kapat.
 
-**USB Wi-Fi adaptörü takılıyken asla `sudo iiab-network` çalıştırma.** Hotspot'u adaptöre taşıyabilir. Önce adaptörü çıkar.
+İçerikleri güncellemek için `Icerik-Indir.bat` dosyasını ara ara tekrar çalıştır. Yeni sürüm varsa indirir ve eskisini siler.
 
-### Windows'ta çalıştırma
+### Hangi içerikleri indirmeli?
 
-Raspberry Pi gerekmez. Aynı kütüphane ve ana sayfa Windows 10/11 bir bilgisayarda da çalışır. Sisteme hiçbir şey kurulmaz, yönetici yetkisi gerekmez. Her şey repo klasörünün içinde kalır.
+| İçerik | Boyut | Not |
+|---|---|---|
+| Türkçe Vikipedi (`wikipedia_tr_all_maxi`) | ~9 GB | Genel bilgi, Türkçe |
+| WikiMed (`wikipedia_en_medicine_maxi`) | ~2 GB | İngilizce Wikipedia'nın tıp maddeleri |
+| WikEM, MDWiki, NHS, sahra tıbbı | ~2,5 GB | Acil tıp ve ilaç bilgisi |
+| Hayatta kalma kitapları (`zimgit-*`, ready.gov, Low-tech Magazine) | ~3,3 GB | Su, gıda, düğümler, afet sonrası |
+| iFixit + StackExchange siteleri | ~7 GB | Tamir, bahçe, yemek, araç bakımı, telsiz |
+| İngilizce Wikipedia (`wikipedia_en_all_maxi`) | ~120 GB | İsteğe bağlı. Bunu indirirsen WikiMed'e gerek kalmaz |
 
-1. Repoyu indir (yeşil **Code** düğmesi → **Download ZIP**, ya da `git clone`) ve zip'i aç.
-2. *(İsteğe bağlı)* ZIM dosyalarını başka bir diskte tutmak için `config\windows.conf` dosyasında `LIBRARY=D:\PrepperLibrary` satırını aç. Ne indirileceğini `config\content.conf` dosyasından seç.
-3. İçerikleri indirmek için **`Icerik-Indir.bat`** dosyasına çift tıkla. İlk çalıştırmada [kiwix-serve](https://github.com/kiwix/kiwix-tools) ve [Caddy](https://caddyserver.com) de `windows\bin` klasörüne indirilir. Yarıda kalırsa ya da içerikleri güncellemek istersen tekrar çalıştır. Elinde hazır `.zim` dosyaları varsa onları da `library\zims` klasörüne kopyalayabilirsin.
-4. **`Baslat.bat`** dosyasına çift tıkla. Ana sayfa **http://localhost:8080/home/** adresinde açılır. Kapatmak için pencereyi kapat.
+**Öneri:** İlk seferde İngilizce Wikipedia'yı `#` ile kapat. Kalanlar yaklaşık 24 GB tutar.
 
-**Diğer cihazlardan erişim:** Pencerede `http://192.168.1.20:8080/home/` gibi adresler de yazar. Aynı ağdaki telefonlar bu adresleri kullanabilir. Windows Güvenlik Duvarı `caddy.exe` için izin sorarsa özel ağlarda izin ver. Pi'deki gibi kendi Wi-Fi ağını kurmak için Windows'un **Mobil etkin nokta** özelliğini aç. Ona bağlanan telefonlar `http://192.168.137.1:8080/home/` adresini kullanır.
+**İndirme hızı:** Kiwix'in sunucusu bazı bağlantılarda çok yavaş olabiliyor (Türkiye'den yapılan testte ~85 KB/s ölçüldü). Büyük dosyaları [download.kiwix.org/zim](https://download.kiwix.org/zim/) adresindeki `.torrent` linkleriyle ya da [Kiwix Desktop](https://kiwix.org/en/applications/) uygulamasıyla indirip `library\zims` klasörüne kopyalayabilirsin. Klasöre konan her `.zim` dosyası bir sonraki başlatmada kendiliğinden tanınır.
 
-**Windows'ta olmayanlar:** Haritalar, Kolibri, yönetim paneli ve captive portal. Bunlar Internet-in-a-Box'tan geliyor. Ana sayfa bunları kendiliğinden gri gösterir.
+### Ayarlar
+
+`config\windows.conf` dosyasında üç ayar var:
+
+| Ayar | Varsayılan | Ne işe yarar |
+|---|---|---|
+| `LIBRARY` | `library` (bu klasörün içi) | ZIM dosyalarının duracağı yer. Büyük bir disk seçmek için ör. `LIBRARY=D:\PrepperLibrary` |
+| `PORT` | `8080` | Ana sayfanın portu |
+| `KIWIX_PORT` | `8081` | Kiwix'in iç portu (sadece bu bilgisayardan erişilir) |
+
+### Telefondan ve diğer cihazlardan erişim
+
+`Baslat.bat` penceresinde `http://192.168.1.20:8080/home/` gibi adresler yazar. Aynı Wi-Fi ağındaki cihazlar bu adresleri kullanabilir.
+
+- Windows Güvenlik Duvarı ilk seferde `caddy.exe` için izin sorar. **Özel ağlar** için izin ver.
+- **İnternet ya da modem yoksa:** Windows'un **Ayarlar → Ağ ve İnternet → Mobil etkin nokta** özelliğini aç. Bilgisayar kendi Wi-Fi ağını yayınlar. Ona bağlanan telefonlar **http://192.168.137.1:8080/home/** adresini açar.
+
+### Windows sürümünde olmayanlar
+
+Orijinal Pi sürümündeki şu özellikler Internet-in-a-Box'a bağlı olduğu için burada yok: **haritalar**, **Kolibri** (çevrimdışı dersler), **yönetim paneli** ve ağa bağlanınca ana sayfayı kendiliğinden açan **captive portal**. Ana sayfa bunları otomatik olarak gri gösterir.
+
+### Sorun giderme
+
+- **Pencere açılıp hemen kapanıyor ya da "port kullanımda" diyor.** 8080 portunu başka bir program kullanıyor olabilir. `config\windows.conf` içinde `PORT=8090` gibi başka bir değer ver.
+- **Ana sayfada her şey gri, "Henüz yüklenmedi" yazıyor.** `library\zims` klasöründe (ya da `LIBRARY` olarak ayarladığın yerde) `.zim` dosyası yok demektir. `Icerik-Indir.bat` dosyasını çalıştır ya da dosyaları oraya kopyala, sonra `Baslat.bat` ile yeniden başlat.
+- **Telefon sayfayı açamıyor.** Telefonun bilgisayarla aynı ağda olduğundan emin ol. Güvenlik duvarı izni verilmemiş olabilir: **Windows Güvenlik → Güvenlik duvarı → Bir uygulamaya izin ver** ekranında `caddy.exe` için "Özel" kutusunu işaretle.
+- **Windows "Bilgisayarınız korundu" (SmartScreen) uyarısı veriyor.** İnternetten indirilen `.bat` dosyalarında bu uyarı normal. **Ek bilgi → Yine de çalıştır** ile devam edebilirsin.
+- **Kitap koleksiyonları (Su Arıtma, Düğümler, Gıda, Afet Sonrası, Tıp) sürekli "yükleniyor" diyor.** Bu koleksiyonlar kitap listesini tarayıcının yerel veritabanında tutuyor. Gizli sekmeler buna izin vermiyor, sayfayı normal bir sekmede aç.
+- **Bir indirme yarıda kaldı.** `Icerik-Indir.bat` dosyasını tekrar çalıştır. Yarım dosyalar `.part` uzantısıyla durur ve kaldığı yerden tamamlanır.
+
+### Raspberry Pi sürümü
+
+Pi kurulum betikleri (`install.sh`, `scripts\`, `config\iiab-overrides.yml`) bu repoda değişmeden duruyor. Pi kurulumu için [orijinal reponun README'sine](https://github.com/schematrix/HAS_Prepper_Disk#readme) bak.
 
 ### Repo yapısı
 
 ```
-install.sh                   ana kurulum betiği
-scripts/setup-ssd.sh         SSD'yi /library klasörüne bağlar
-scripts/download-content.sh  Kiwix'ten ZIM dosyalarını indirir/günceller
-scripts/install-homepage.sh  özel ana sayfayı kurar
-config/iiab-overrides.yml    Internet-in-a-Box ayarları
-config/content.conf          indirilecek içerik listesi
-www/home/index.html          ana sayfa
+Baslat.bat                    sunucuyu başlatır ve ana sayfayı açar
+Icerik-Indir.bat              içerikleri indirir/günceller
+config/content.conf           indirilecek içerik listesi
+config/windows.conf           Windows ayarları (klasör, portlar)
+windows/start.ps1             kiwix-serve + Caddy'yi başlatır
+windows/download-content.ps1  ZIM dosyalarını Kiwix'ten indirir
+windows/setup.ps1             kiwix-serve ve Caddy'yi windows/bin içine indirir
+windows/Caddyfile             /home ve /kiwix adreslerini tek portta birleştirir
+www/home/index.html           ana sayfa
+library/zims/                 indirilen içerikler (git'e eklenmez)
+install.sh, scripts/          Raspberry Pi kurulumu (orijinal proje)
 ```
 
-### Sorun giderme
+### Lisans ve teşekkür
 
-- **Kurulumdan sonra `ssh kullanici@hostname.local` çalışmıyor.** Internet-in-a-Box cihazın adını `box` yapar. `ssh kullanici@box.local` ya da Pi'nin IP adresini kullan. IP adresini bulmak için bilgisayarında `arp -a` çalıştır ya da modeminin cihaz listesine bak.
-- **Chromium "profile is locked" hatası veriyor.** Bu da cihaz adının değişmesinden kaynaklanır. "Unlock Profile" butonuna tıkla ya da `rm -f ~/.config/chromium/Singleton*` komutunu çalıştır.
-- **Hotspot görünmüyor.** Ethernet ile bağlan, `sudo iiab-diagnostics` komutuyla kontrol et ve kurulumun bittiğinden emin ol: `/etc/iiab/install-flags/iiab-complete` dosyası var olmalı.
-- **Harita indirmesi "connection reset by peer" hatası veriyor.** Harita sunucusu (`contabostorage.com`) Türkiye gibi bazı ülkelerde engelli. Pi'ye Cloudflare WARP kur, bağlan, indirmeyi yönetim panelinden tekrar başlat ve bitince bağlantıyı kapat:
-  ```bash
-  curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-  echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(. /etc/os-release; echo $VERSION_CODENAME) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-  sudo apt update && sudo apt install -y cloudflare-warp
-  warp-cli --accept-tos registration new && warp-cli --accept-tos connect
-  # indirmeler bitince:
-  warp-cli --accept-tos disconnect
-  ```
-- **Kitap koleksiyonları (Su Arıtma, Düğümler, Gıda, Afet Sonrası, Tıp) sürekli "yükleniyor" diyor.** Bu koleksiyonlar kitap listesini tarayıcının yerel veritabanında tutuyor. iPhone Safari'nin gizli sekmesi ve captive portal penceresi buna izin vermiyor. Normal bir Safari sekmesinde aç.
-- **Hotspot hiç açılmıyor ve kayıtta "invalid WPA passphrase length" yazıyor.** Wi-Fi şifreleri 8–63 karakter olmalı. `/etc/iiab/local_vars.yml` içindeki `hostapd_password` ve `/etc/hostapd/hostapd.conf` içindeki `wpa_passphrase` satırını düzelt, sonra `sudo systemctl restart hostapd` çalıştır.
-- **Hotspot görünüyor ama cihazlar "hatalı şifre" diyor ya da birkaç saniyede kopuyor.** Şifre büyük ihtimalle doğru, sorun hotspot köprüsünün (`br0`) kapalı olması. `sudo journalctl -u hostapd` çıktısında her ~4 saniyede tekrarlanan "associated → disassociated" satırları görürsün. Kontrol et:
-  ```bash
-  ip -br addr show br0
-  bridge link
-  ```
-  `br0` DOWN ve `wlan0` için `state disabled` görünüyorsa köprü açılışta kurulmamış demektir. `nmcli` ile bağlantı eklemek ya da değiştirmek `/etc/netplan/90-NM-*.yaml` dosyalarını boşaltabiliyor, bu da köprüyü siliyor. Çözüm:
-  ```bash
-  sudo mkdir -p /root/netplan-bak && sudo mv /etc/netplan/90-NM-*.yaml /root/netplan-bak/
-  sudo nmcli connection add type bridge ifname br0 con-name iiab-br0 ipv4.method manual ipv4.addresses 10.10.10.10/24 ipv6.method disabled bridge.stp no connection.autoconnect yes
-  sudo nmcli connection up iiab-br0
-  sudo systemctl restart hostapd dnsmasq
-  ```
-  Artık `br0` 10.10.10.10 adresiyle UP, `wlan0` da `state forwarding` görünmeli.
-- **Kablosuz SSH:** Pi'nin hotspot'una bağlan ve `ssh kullanici@10.10.10.10` kullan.
-- **Orijinal ana sayfaya dönmek için:** `sudo cp /library/www/html/home/index.html.iiab-original /library/www/html/home/index.html`
+Orijinal proje: [schematrix/HAS_Prepper_Disk](https://github.com/schematrix/HAS_Prepper_Disk). Betikler ve ana sayfa [MIT Lisansı](LICENSE) ile yayınlanmıştır. Kiwix, Caddy ve indirilen tüm içerikler (Wikipedia vb.) kendi lisanslarına tabidir. Bu proje Kiwix ya da Internet-in-a-Box ile bağlantılı değildir.
 
-### Lisans
+---
 
-Bu repodaki betikler ve ana sayfa [MIT Lisansı](LICENSE) ile yayınlanmıştır. Internet-in-a-Box, Kiwix ve indirilen tüm içerikler (Wikipedia, OpenStreetMap vb.) kendi lisanslarına tabidir. Bu proje Internet-in-a-Box veya Kiwix ile bağlantılı değildir.
+## English
+
+An offline knowledge archive for Windows. Wikipedia, medical references, repair guides and survival books open from a single homepage. Once the content is downloaded, **no internet is needed**. Phones and computers on the same network can use it from a browser.
+
+This is a **Windows fork** of [schematrix/HAS_Prepper_Disk](https://github.com/schematrix/HAS_Prepper_Disk), which was built for the Raspberry Pi. Content comes from [Kiwix](https://kiwix.org). No Raspberry Pi or Internet-in-a-Box is required.
+
+### Requirements
+
+- Windows 10 or 11 (64-bit)
+- Disk space for content: 10–20 GB for a small selection, ~150 GB for the full default list
+- Nothing is installed and no admin rights are needed. Everything stays inside this folder.
+
+### Quick start
+
+1. **Download.** Green **Code** button → **Download ZIP**, then extract it. Or `git clone https://github.com/gorsar/HAS_Prepper_Disk.git`.
+2. **Choose content.** Open `config\content.conf` in Notepad and put `#` in front of lines you don't want. English Wikipedia alone is ~120 GB, so consider disabling it at first. Without it the list is about 24 GB.
+3. **Download content.** Double-click **`Icerik-Indir.bat`** ("download content"). The first run also fetches kiwix-serve and Caddy (~35 MB) into `windows\bin`. Re-run it to resume or update.
+4. **Start.** Double-click **`Baslat.bat`** ("start"). The homepage opens at **http://localhost:8080/home/**. Close the window to stop.
+
+Kiwix's download server can be slow. You can also get large files via the `.torrent` links on [download.kiwix.org/zim](https://download.kiwix.org/zim/) or with Kiwix Desktop, and copy them into `library\zims`. They are picked up on the next start.
+
+**Settings** live in `config\windows.conf`: `LIBRARY` (where ZIM files are stored, e.g. `D:\PrepperLibrary`), `PORT` (default 8080) and `KIWIX_PORT` (default 8081, localhost only).
+
+**Other devices:** the window prints addresses like `http://192.168.1.20:8080/home/`. Allow `caddy.exe` on private networks when Windows Firewall asks. With no router, turn on Windows **Mobile hotspot**. Phones that join it open `http://192.168.137.1:8080/home/`.
+
+**Not available on Windows:** maps, Kolibri, the admin console and the captive portal. These come from Internet-in-a-Box, and the homepage greys them out automatically. The Raspberry Pi scripts are still in this repo unchanged. See the [original README](https://github.com/schematrix/HAS_Prepper_Disk#readme) for the Pi setup.
+
+**License:** scripts and homepage are under the [MIT License](LICENSE). Kiwix, Caddy and all downloaded content keep their own licenses.
